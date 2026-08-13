@@ -1,9 +1,66 @@
 appId: com.nswebsteam.testingproject
 ---
+# 01 — HOME
 - launchApp:
     clearState: true
 
 - waitForAnimationToEnd
 
 - takeScreenshot:
-    path: home
+    path: 01-home
+
+# 02 — ABOUT
+- openLink: "myfirstapp://about"
+
+- waitForAnimationToEnd
+
+- takeScreenshot:
+    path: 02-about
+
+# 03 — DIRECTORY
+- openLink: "myfirstapp://directory"
+
+- waitForAnimationToEnd
+
+- takeScreenshot:
+    path: 03-directory
+
+# 04 — GET LISTED
+- openLink: "myfirstapp://get-listed"
+
+- waitForAnimationToEnd
+
+- takeScreenshot:
+    path: 04-get-listed
+
+# 05 — SHOP
+- openLink: "myfirstapp://shop"
+
+- waitForAnimationToEnd
+
+- takeScreenshot:
+    path: 05-shop
+
+# 06 — EXPLORE
+- openLink: "myfirstapp://explore"
+
+- waitForAnimationToEnd
+
+- takeScreenshot:
+    path: 06-explore
+
+# 07 — BUSINESS DETAIL
+- openLink: "myfirstapp://business/1"
+
+- waitForAnimationToEnd
+
+- takeScreenshot:
+    path: 07-business-detail
+
+# 08 — PRODUCT DETAIL
+- openLink: "myfirstapp://product/1"
+
+- waitForAnimationToEnd
+
+- takeScreenshot:
+    path: 08-product-detail
