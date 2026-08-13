@@ -1,6 +1,6 @@
 workflows:
   ios-simulator:
-    name: Expo iOS Simulator
+    name: Expo iOS Simulator + Screenshots
     max_build_duration: 60
     instance_type: mac_mini_m2
 
@@ -9,19 +9,31 @@ workflows:
       cocoapods: default
 
     scripts:
+      # -----------------------------
+      # 1. Install Expo dependencies
+      # -----------------------------
       - name: Install dependencies
         script: |
           npm install
 
+      # -----------------------------
+      # 2. Generate native iOS project
+      # -----------------------------
       - name: Generate iOS project
         script: |
           npx expo prebuild --platform ios
 
+      # -----------------------------
+      # 3. Install CocoaPods
+      # -----------------------------
       - name: Install CocoaPods
         script: |
           cd ios
           pod install
 
+      # -----------------------------
+      # 4. Build iOS Simulator app
+      # -----------------------------
       - name: Build iOS Simulator app
         script: |
           xcodebuild \
@@ -30,7 +42,91 @@ workflows:
             -sdk iphonesimulator \
             -configuration Debug \
             -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
 
+      # -----------------------------
+      # 5. Find generated .app
+      # -----------------------------
+      - name: Find iOS app
+        script: |
+          APP_PATH=$(find "$CM_BUILD_DIR/build" \
+            -type d \
+            -path "*Debug-iphonesimulator/*.app" \
+            -maxdepth 8 \
+            | head -1)
+
+          echo "APP_PATH=$APP_PATH"
+
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: iOS .app not found"
+            exit 1
+          fi
+
+          echo "$APP_PATH" > "$CM_BUILD_DIR/app_path.txt"
+
+      # -----------------------------
+      # 6. Install Maestro
+      # -----------------------------
+      - name: Install Maestro
+        script: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          export PATH="$PATH:$HOME/.maestro/bin"
+
+          maestro --version
+
+      # -----------------------------
+      # 7. Start iOS Simulator
+      # -----------------------------
+      - name: Start iOS Simulator
+        script: |
+          export PATH="$PATH:$HOME/.maestro/bin"
+
+          maestro start-device --platform ios
+
+          sleep 20
+
+          xcrun simctl list devices
+          xcrun simctl list devices booted
+
+      # -----------------------------
+      # 8. Install app into simulator
+      # -----------------------------
+      - name: Install app on Simulator
+        script: |
+          APP_PATH=$(cat "$CM_BUILD_DIR/app_path.txt")
+
+          echo "Installing:"
+          echo "$APP_PATH"
+
+          xcrun simctl install booted "$APP_PATH"
+
+      # -----------------------------
+      # 9. Run Maestro screenshots
+      # -----------------------------
+      - name: Run Maestro screenshots
+        script: |
+          export PATH="$PATH:$HOME/.maestro/bin"
+
+          mkdir -p "$CM_BUILD_DIR/screenshots"
+
+          maestro test \
+            --test-output-dir "$CM_BUILD_DIR/screenshots" \
+            .maestro/
+
+      # -----------------------------
+      # 10. Show generated files
+      # -----------------------------
+      - name: List screenshots
+        script: |
+          echo "Generated screenshots:"
+          find "$CM_BUILD_DIR/screenshots" -type f -print
+
+    # -----------------------------
+    # Codemagic artifacts
+    # -----------------------------
     artifacts:
       - build/Build/Products/Debug-iphonesimulator/*.app
+      - screenshots/**/*.png
+      - screenshots/**/*
+      - /tmp/xcodebuild_logs/*.log

@@ -1,0 +1,9 @@
+appId: com.nswebsteam.testingproject
+---
+- launchApp:
+    clearState: true
+
+- waitForAnimationToEnd
+
+- takeScreenshot:
+    path: home
