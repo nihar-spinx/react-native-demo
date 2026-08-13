@@ -10,14 +10,14 @@ workflows:
 
     scripts:
       # --------------------------------------------------
-      # 1. Install Expo / React Native dependencies
+      # 1. Install dependencies
       # --------------------------------------------------
       - name: Install dependencies
         script: |
           npm install
 
       # --------------------------------------------------
-      # 2. Generate native iOS project
+      # 2. Generate iOS project
       # --------------------------------------------------
       - name: Generate iOS project
         script: |
@@ -86,50 +86,48 @@ workflows:
           maestro --version
 
       # --------------------------------------------------
-      # 7. Start iOS Simulator
+      # 7. Create and boot iPhone 17 / iOS 26.4
       # --------------------------------------------------
       - name: Start iOS Simulator
         script: |
-          export PATH="$PATH:$HOME/.maestro/bin"
+          echo "Available iOS runtimes:"
+          xcrun simctl list runtimes
 
-          echo "Starting iOS Simulator..."
+          echo "Creating iPhone 17 simulator..."
 
-          maestro start-device --platform ios
+          SIMULATOR_UDID=$(xcrun simctl create \
+            "Codemagic-iPhone-17" \
+            "com.apple.CoreSimulator.SimDeviceType.iPhone-17" \
+            "com.apple.CoreSimulator.SimRuntime.iOS-26-4")
 
-          echo "Waiting for simulator..."
-
-          sleep 30
-
-          echo "Available simulators:"
-          xcrun simctl list devices
-
-          echo "Booted simulators:"
-          xcrun simctl list devices booted
-
-          # Find the currently booted simulator
-          BOOTED_UDID=$(xcrun simctl list devices booted | \
-            grep -oE '[0-9A-Fa-f-]{36}' | head -1)
-
-          if [ -z "$BOOTED_UDID" ]; then
-            echo "ERROR: No booted iOS Simulator found"
+          if [ -z "$SIMULATOR_UDID" ]; then
+            echo "ERROR: Failed to create iOS Simulator"
             exit 1
           fi
 
           echo "================================="
-          echo "BOOTED SIMULATOR:"
-          echo "$BOOTED_UDID"
+          echo "SIMULATOR UDID:"
+          echo "$SIMULATOR_UDID"
           echo "================================="
 
-          echo "$BOOTED_UDID" > "$CM_BUILD_DIR/simulator_udid.txt"
+          echo "$SIMULATOR_UDID" > "$CM_BUILD_DIR/simulator_udid.txt"
 
-          echo "Waiting for Simulator to fully boot..."
+          echo "Booting simulator..."
 
-          xcrun simctl bootstatus "$BOOTED_UDID" -b
+          xcrun simctl boot "$SIMULATOR_UDID"
 
-          echo "Simulator is ready."
+          echo "Waiting for simulator to fully boot..."
+
+          xcrun simctl bootstatus "$SIMULATOR_UDID" -b
+
+          echo "================================="
+          echo "SIMULATOR READY"
+          echo "================================="
+
+          xcrun simctl list devices | grep -A 5 "iOS 26.4"
 
       # --------------------------------------------------
-      # 8. Install app on iOS Simulator
+      # 8. Install app on Simulator
       # --------------------------------------------------
       - name: Install app on Simulator
         script: |
@@ -142,14 +140,12 @@ workflows:
           echo "================================="
 
           echo "================================="
-          echo "SIMULATOR UDID:"
+          echo "SIMULATOR:"
           echo "$SIMULATOR_UDID"
           echo "================================="
 
-          # Verify app exists
           if [ ! -d "$APP_PATH" ]; then
-            echo "ERROR: .app does not exist:"
-            echo "$APP_PATH"
+            echo "ERROR: .app does not exist"
             exit 1
           fi
 
@@ -184,7 +180,7 @@ workflows:
             .maestro/
 
       # --------------------------------------------------
-      # 10. List generated screenshots
+      # 10. List screenshots
       # --------------------------------------------------
       - name: List screenshots
         script: |
@@ -201,7 +197,7 @@ workflows:
           fi
 
     # --------------------------------------------------
-    # Codemagic artifacts
+    # Artifacts
     # --------------------------------------------------
     artifacts:
       - build/Build/Products/Debug-iphonesimulator/*.app
